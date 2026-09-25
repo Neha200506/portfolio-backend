@@ -1,5 +1,59 @@
 const supabase = require("../config/supabase");
+const { uploadFile } = require("../services/storageService");
 
+// UPLOAD media file
+const uploadMedia = async (req, res) => {
+  try {
+    // Check whether a file was uploaded
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        message: "File is required"
+      });
+    }
+
+    // Upload file to Supabase Storage
+    const uploadedFile = await uploadFile(req.file);
+
+    // Save file information in media table
+    const { data, error } = await supabase
+      .from("media")
+      .insert([
+        {
+          file_name: uploadedFile.fileName,
+          file_url: uploadedFile.fileUrl,
+          storage_path: uploadedFile.storagePath,
+          file_type: uploadedFile.fileType,
+          file_size: uploadedFile.fileSize
+        }
+      ])
+      .select()
+      .single();
+
+    if (error) {
+      return res.status(500).json({
+        success: false,
+        message: "File uploaded but media record could not be saved",
+        error: error.message
+      });
+    }
+
+    res.status(201).json({
+      success: true,
+      message: "File uploaded successfully",
+      data
+    });
+
+  } catch (error) {
+    console.error("Upload error:", error);
+
+    res.status(500).json({
+      success: false,
+      message: "File upload failed",
+      error: error.message
+    });
+  }
+};
 // CREATE media record
 const createMedia = async (req, res) => {
   try {
@@ -199,6 +253,7 @@ const deleteMedia = async (req, res) => {
 };
 
 module.exports = {
+  uploadMedia,
   createMedia,
   getMedia,
   getMediaById,
