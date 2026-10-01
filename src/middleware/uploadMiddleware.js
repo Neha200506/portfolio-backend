@@ -17,6 +17,7 @@ const upload = multer({
       "image/png",
       "image/webp",
       "image/gif",
+      "image/avif",
       "application/pdf"
     ];
 
@@ -25,7 +26,7 @@ const upload = multer({
     } else {
       cb(
         new Error(
-          "Only JPG, PNG, WEBP, GIF images and PDF files are allowed"
+          "Only JPG, PNG, WEBP, GIF, AVIF images and PDF files are allowed"
         )
       );
     }

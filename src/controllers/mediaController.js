@@ -1,5 +1,5 @@
 const supabase = require("../config/supabase");
-const { uploadFile } = require("../services/storageService");
+const { uploadFile, deleteFile } = require("../services/storageService");
 
 // UPLOAD media file
 const uploadMedia = async (req, res) => {
@@ -252,11 +252,88 @@ const deleteMedia = async (req, res) => {
   }
 };
 
+// REPLACE media file
+const replaceMedia = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        message: "File is required"
+      });
+    }
+
+    // 1. Fetch existing media record to get current storage_path
+    const { data: existingMedia, error: fetchError } = await supabase
+      .from("media")
+      .select("*")
+      .eq("id", id)
+      .single();
+
+    if (fetchError || !existingMedia) {
+      return res.status(404).json({
+        success: false,
+        message: "Media record not found"
+      });
+    }
+
+    // 2. Delete old file from Supabase Storage
+    if (existingMedia.storage_path) {
+      try {
+        await deleteFile(existingMedia.storage_path);
+      } catch (storageErr) {
+        console.error("Error deleting old file from storage:", storageErr);
+      }
+    }
+
+    // 3. Upload new image to Supabase Storage
+    const uploadedFile = await uploadFile(req.file);
+
+    // 4. Update existing media database record (do NOT create a second record)
+    const { data, error } = await supabase
+      .from("media")
+      .update({
+        file_name: uploadedFile.fileName,
+        file_url: uploadedFile.fileUrl,
+        storage_path: uploadedFile.storagePath,
+        file_type: uploadedFile.fileType,
+        file_size: uploadedFile.fileSize
+      })
+      .eq("id", id)
+      .select()
+      .single();
+
+    if (error) {
+      return res.status(500).json({
+        success: false,
+        message: "Failed to update media record",
+        error: error.message
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "Media item replaced successfully",
+      data
+    });
+
+  } catch (error) {
+    console.error("Replace media error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to replace media item",
+      error: error.message
+    });
+  }
+};
+
 module.exports = {
   uploadMedia,
   createMedia,
   getMedia,
   getMediaById,
   updateMedia,
-  deleteMedia
+  deleteMedia,
+  replaceMedia
 };

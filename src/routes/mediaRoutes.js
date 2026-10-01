@@ -6,7 +6,8 @@ const {
   getMedia,
   getMediaById,
   updateMedia,
-  deleteMedia
+  deleteMedia,
+  replaceMedia
 } = require("../controllers/mediaController");
 
 const authMiddleware = require("../middleware/authMiddleware");
@@ -20,6 +21,14 @@ router.post(
   authMiddleware,
   upload.single("file"),
   uploadMedia
+);
+
+// Replace media file
+router.put(
+  "/:id/replace",
+  authMiddleware,
+  upload.single("file"),
+  replaceMedia
 );
 
 // Media CRUD
